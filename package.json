@@ -1,0 +1,23 @@
+{
+  "name": "js-desugar",
+  "version": "1.0.0",
+  "description": "demystify JavaScript by desugaring",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "browserify app.js > docs/app.browser.js & cake doc:site"
+  },
+  "author": "Josherich",
+  "license": "MIT",
+  "dependencies": {
+    "recast": "^0.15.0"
+  },
+  "devDependencies": {
+    "codemirror": "^5.38.0",
+    "coffeescript": "^2.3.1",
+    "crypto": "^1.0.1",
+    "highlight.js": "^9.12.0",
+    "markdown-it": "^8.4.1",
+    "underscore": "^1.9.1"
+  }
+}

@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="content-type" content="text/html;charset=UTF-8" />
+<title>JavaScript Desugar</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="canonical" href="https://josherich.me" />
+
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="./favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="./favicon-16x16.png" sizes="16x16">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+<meta name="theme-color" content="#ffffff">
+
+<link href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9gVQ4dYFwwWSjIDZnLEWnxCjeSWFphJiwGPXr1jddIhOegiu1FwO5qRGvFXOdJZ4" crossorigin="anonymous">
+<!-- The CoffeeScript logo font is Google’s Galada -->
+<link href="https://fonts.googleapis.com/css?family=Alegreya+Sans:400,800|Lato:300,300i,400,700|Roboto+Mono:400,400i" rel="stylesheet" crossorigin="anonymous">
+<link href="https://cdn.jsdelivr.net/npm/codemirror@5.37.0/lib/codemirror.css" rel="stylesheet" crossorigin="anonymous">
+<style>
+/* Adapted from https://github.com/FarhadG/code-mirror-themes/blob/master/themes/twilight.css and https://github.com/codemirror/CodeMirror/blob/master/theme/twilight.css */
+
+/* CodeMirror general styling */
+
+.CodeMirror,
+.placeholder-code {
+  /* https://codemirror.net/demo/resize.html */
+  height: auto;
+  background: transparent;
+  font-family: 'Roboto Mono';
+  font-weight: 400;
+  line-height: 1.25;
+  letter-spacing: 0.3px;
+  color: #f8f8f8;
+  /* Prevent mobile Safari from zooming in on our code editors; the code is 16px naturally, but somehow being explicit about it prevents the zooming */
+  font-size: 16px;
+}
+@media (min-width: 768px) {
+  .CodeMirror,
+  .placeholder-code {
+    font-size: 87.5%; /* Matching Bootstrap’s font size for code, which calculates to 14.4px */
+  }
+}
+.CodeMirror-lines {
+  padding: 0.5em 0;
+}
+.placeholder-code {
+  padding: 0.5em 4px;
+  margin-bottom: 1.37em;
+  white-space: pre-wrap;
+}
+.CodeMirror pre,
+pre.placeholder-code {
+  line-height: 1.4em;
+}
+.CodeMirror-code:focus {
+  outline: none;
+}
+div.CodeMirror-cursor {
+  border-left: 3px solid #f8f8f8;
+}
+.CodeMirror-activeline-background {
+  background: #ffffff08;
+}
+.CodeMirror-selected {
+  background: #ddf0ff33;
+}
+
+/* Syntax highlighting */
+
+.cm-keyword,
+.placeholder-code .keyword {
+  color: #cda869;
+}
+.cm-atom {
+  color: #dad085;
+}
+.cm-number,
+.cm-meta,
+.placeholder-code .number,
+.placeholder-code .built_in,
+.placeholder-code .builtin-name,
+.placeholder-code .literal,
+.placeholder-code .type,
+/*.placeholder-code .params,*/
+.placeholder-code .meta,
+.placeholder-code .link {
+  color: #dad085;
+}
+.cm-def {
+  color: #f8f8f8;
+}
+span.cm-variable-2,
+span.cm-tag {
+  color: #f8f8f8;
+}
+span.cm-variable-3,
+span.cm-def,
+span.cm-type {
+  color: #f8f8f8;
+}
+.cm-operator,
+.placeholder-code .punctuation,
+.placeholder-code .symbol,
+.placeholder-code .bullet,
+.placeholder-code .addition,
+.placeholder-code .operator {
+  color: #cda869;
+}
+.cm-comment,
+.placeholder-code .comment {
+  font-style: italic;
+  color: #5f5a60;
+}
+.cm-string,
+.cm-string-2,
+.placeholder-code .string {
+  color: #8f9d6a;
+}
+.cm-property,
+.placeholder-code .attribute {
+  color: #dad085;
+}
+.cm-builtin {
+  color: #cda869;
+}
+.cm-tag {
+  color: #997643;
+}
+.cm-attribute {
+  color: #d6bb6d;
+}
+.cm-header {
+  color: #FF6400;
+}
+.cm-hr {
+  color: #AEAEAE;
+}
+.cm-link {
+  color: #ad9361;
+  font-style: italic;
+  text-decoration: none;
+}
+.cm-error {
+  border-bottom: 1px solid rgba(142, 22, 22, 0.67);
+}
+
+/* Uneditable code blocks are inverted, so use darker versions of the above */
+
+.uneditable-code-block code {
+  padding: 0;
+}
+
+.uneditable-code-block .comment {
+  font-style: italic;
+  color: #837B85;
+}
+.uneditable-code-block .class,
+.uneditable-code-block .function,
+.uneditable-code-block .keyword,
+.uneditable-code-block .reserved,
+.uneditable-code-block .title {
+  color: #534328;
+}
+.uneditable-code-block .string
+.uneditable-code-block .value
+.uneditable-code-block .inheritance
+.uneditable-code-block .header {
+  color: #3A4029;
+}
+.uneditable-code-block .variable,
+.uneditable-code-block .literal,
+.uneditable-code-block .tag,
+.uneditable-code-block .regexp,
+.uneditable-code-block .subst,
+.uneditable-code-block .property {
+  color: #474429;
+}
+.uneditable-code-block .number,
+.uneditable-code-block .preprocessor,
+.uneditable-code-block .built_in,
+.uneditable-code-block .params,
+.uneditable-code-block .constant {
+  color: #474429;
+}
+
+html,
+body {
+  /* Prevent scroll on narrow devices */
+  overflow-x: hidden;
+}
+body {
+  /* Required for Scrollspy */
+  position: relative;
+  /* Push below header bar */
+  /*margin-top: 3.5rem;*/
+}
+
+svg {
+  width: auto;
+  height: 100%;
+}
+
+a {
+  color: #1b5e20;
+  transition: 0.1s ease-in-out;
+}
+a:focus, a:hover, a:active {
+  color: #388e3c;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+button:focus, .navbar-dark .navbar-toggler:focus {
+  outline: none;
+  border: thin solid rgba(248, 243, 240, 0.3);
+}
+
+.bg-dark {
+  background-color: #3e2723 !important;
+}
+
+.bg-ribbed-light {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 3"><path opacity=".03" fill="#000" d="M0 0h1v1H0z"/><path opacity=".005" fill="#000" d="M0 1h1v2H0z"/></svg>');
+  background-size: 1px 3px;
+}
+.bg-ribbed-dark {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 3"><path opacity=".2" fill="#000" d="M0 0h1v1H0z"/><path opacity=".15" fill="#000" d="M0 1h1v2H0z"/></svg>');
+  background-size: 1px 3px;
+}
+
+
+/*
+ * Header
+ */
+.site-navbar {
+  height: 3.5rem;
+  font-family: 'Lato';
+  font-weight: 400;
+  font-size: 1.1em;
+}
+
+.navbar-brand {
+  height: 2.2em;
+  margin-right: 1em;
+}
+
+.navbar-dark path {
+  fill: #fff;
+}
+
+.navbar-nav .nav-item {
+  margin-left: 0.6em;
+  margin-right: 0.6em;
+  border-radius: 0.4em;
+}
+.navbar-nav .nav-item:hover,
+.navbar-nav .nav-item:active,
+.navbar-nav .nav-item.show {
+  background-color: #4e342e;
+}
+
+.navbar-toggler {
+  transition: all 0.1s ease-in-out;
+}
+
+
+/*
+ * Layout; based on https://codepen.io/Sphinxxxx/pen/WjwbEO
+ */
+.main-row {
+  height: calc(100vh - 3.5rem);
+}
+
+/*
+ * Sidebar
+ */
+
+.sidebar {
+  /* Scrollable contents if viewport is shorter than content */
+  overflow-y: auto;
+  overflow-x: hidden;
+  left: 0;
+  bottom: 0;
+  z-index: 1000;
+  padding: 0;
+  background-color: #efebe9;
+  border-right: 1px solid #efebe9;
+}
+.sidebar::-webkit-scrollbar {
+  display: none;
+}
+@media screen and (max-width: 991px) {
+  .sidebar {
+    position: fixed;
+    top: 3.5em;
+    height: calc(100% - 3.5rem);
+    left: -100%;
+    transition: 0.25s left ease-in-out;
+  }
+  .sidebar.show {
+    left: 0;
+  }
+}
+@media (min-width: 992px) {
+  .sidebar {
+    flex: 0 0 auto;
+  }
+}
+
+.contents {
+  padding: 0.5em 0 0.5em 0.5em;
+  font-family: 'Alegreya Sans';
+  font-weight: 400;
+  font-size: 1.2em;
+  align-items: normal;
+}
+
+.contents .nav .nav {
+  margin-left: 1em;
+  font-size: 0.9em;
+}
+
+.contents .nav-link {
+  padding: 0.2em 0.7em;
+}
+
+.contents .nav-link.active,
+.contents .nav-link.active a:hover,
+.contents .nav-link.active a:focus {
+  font-weight: 800;
+}
+
+
+/*
+ * Main content
+ */
+
+.main {
+  max-width: 100%;
+  padding: 1.3em;
+}
+@media (min-width: 992px) {
+  .main {
+    flex: 1 1 auto;
+    overflow: auto;
+    padding-right: 2em;
+    padding-left: 2em;
+  }
+}
+
+.title-logo {
+  width: 30rem;
+  margin: 3rem auto;
+}
+.title-logo path {
+  fill: #2f2625;
+}
+
+.main p, .main li, .main td, .main th {
+  font-family: Lato;
+  font-weight: 300;
+  font-size: 1.1em;
+  line-height: 1.7;
+}
+.main blockquote {
+  font-size: 1.1em;
+}
+.main li p, .main li li, .main li blockquote {
+  font-size: 1em;
+}
+@media (min-width: 768px) {
+  .main p, .main li, .main td, .main th, .main blockquote {
+    font-size: 1.2em;
+  }
+}
+.main td {
+  vertical-align: top;
+  padding: 0.3em 0;
+}
+.main strong, .main th {
+  font-weight: 700;
+}
+.main a {
+  border-bottom: 2px solid transparent;
+  font-weight: 400;
+}
+.main a:focus, .main a:hover, .main a:active {
+  border-bottom: 2px solid rgba(56, 142, 60, 0.2);
+}
+.main blockquote pre {
+  background-color: #f8f3f0;
+  color: #2f2625;
+  border-radius: .3em;
+  padding: 0.4em 0.6em;
+}
+
+p, blockquote, table, .code-example {
+  margin-bottom: 1.1em;
+}
+.main li {
+  margin-bottom: 0.6em;
+}
+
+code, td code {
+  white-space: nowrap;
+  padding: 2px 8px;
+}
+pre code {
+  white-space: pre; /* We want newlines to be newlines in code blocks */
+}
+
+h2, h3, h4 {
+  margin-top: 1.3em;
+  margin-bottom: 0.6em;
+  font-family: 'Alegreya Sans';
+}
+h2 {
+  font-weight: 800;
+}
+h3, h4, h2 time {
+  font-weight: 400;
+}
+
+@media (min-width: 1200px) {
+  .main > header, .main section > h2, .main section > h3, .main section > h4, .main section > p, .main section > blockquote, .main section > ul, .main section > table {
+    max-width: 80%;
+  }
+}
+
+code, button {
+  font-family: 'Roboto Mono';
+  font-weight: 400;
+}
+code, a > code {
+  background-color: #f8f3f0;
+}
+code {
+  color: #2f2625;
+}
+
+
+/*
+ * Chrome around code examples; see code.css for the styling of the code blocks themselves
+ */
+
+textarea {
+  position: absolute;
+  left: -99999px; /* Hide off canvas, while still remaining visible */
+}
+
+.code-example {
+  background-color: #2f2625;
+  padding: 1em;
+  border-radius: 0.3em;
+  margin-bottom: 1em;
+}
+
+.javascript-output-column {
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-primary {
+  background-color: #69f0ae;
+  color: #0b140f;
+  border-color: #53d88f;
+  transition: 0.2s ease-in-out;
+  min-width: 3.125rem;
+}
+.btn-primary:active, .btn-primary:focus, .btn-primary:hover, .btn-primary:active:hover, .btn-primary:active:focus {
+  background-color: #61fea8;
+  color: #060a08;
+  border-color: #4de486;
+  outline: 0;
+}
+
+.play-button {
+  height: 1em;
+  width: 1em;
+}
+
+.javascript-output-column .CodeMirror-cursor {
+  /* https://github.com/codemirror/CodeMirror/issues/2568 */
+  display: none;
+}
+
+/*
+ * Try CoffeeScript
+ */
+.try-coffeescript {
+  position: fixed;
+  height: calc(100% - 3.5rem);
+  top: 3.5rem;
+  left: 0;
+  right: 0;
+  opacity: 0;
+  transition: opacity 0.15s ease-in-out;
+  z-index: -1001;
+  background-color: #2f2625;
+}
+.try-coffeescript.show {
+  opacity: 1;
+  z-index: 1001;
+}
+
+.try-coffeescript .CodeMirror {
+  height: calc(100vh - 7rem);
+  cursor: text;
+}
+
+.try-coffeescript .code-column {
+  overflow: hidden;
+  background-color: #2f2625;
+  color: #2f2625;
+}
+
+@media screen and (max-width: 767px) {
+  .try-coffeescript .code-column {
+    height: calc(50vh - 0.5 * 3.5rem);
+  }
+}
+@media screen and (min-width: 768px) {
+  .try-coffeescript .code-column {
+    padding-bottom: 100%;
+    margin-bottom: -100%;
+  }
+}
+
+.try-coffeescript button svg {
+  height: 1em;
+  transform: scale(1.3) translateY(0.1em);
+  fill: #0b140f;
+}
+
+@media screen and (max-width: 767px) {
+  .try-coffeescript .try-buttons {
+    position: absolute;
+    bottom: 1em;
+    z-index: 1002;
+  }
+}
+
+</style>
+
+</head>
+<body>
+
+<div class="container-fluid" id="top">
+  <div class="row flex-nowrap main-row">
+    <nav class="sidebar bg-ribbed-light">
+      <nav id="contents" class="navbar contents">
+  <nav class="nav flex-column">
+    <a href="#introduction" class="nav-link" data-action="sidebar-nav">Introduction</a>
+  </nav>
+</nav>
+
+    </nav>
+    <main class="main">
+      <header class="d-none d-lg-block">
+
+      </header>
+      <section id="introduction">
+        <h2>hello desugar</h2>
+<h3>compound assignment operators</h3>
+<p>The compound assignment operator hide one step of righthand side evaluation. This is where the code deviates with what’s in our mind.</p>
+<aside class="code-example container-fluid bg-ribbed-dark" data-example="compound-assignment-operators">
+  <div class="row">
+    <div class="col-md-6 javascript-input-column">
+      <textarea class="javascript-input" id="compound-assignment-operators-sjs">let val = 0;
+
+function inc1() {
+ val++;
+ console.log(val);
+}
+
+function inc2() {
+ val += inc1();
+ console.log(val);
+}
+
+inc2();</textarea>
+      <pre class="placeholder-code"><span class="cm-keyword">let</span> <span class="cm-def">val</span> <span class="cm-operator">=</span> <span class="cm-number">0</span>;
+
+<span class="cm-keyword">function</span> <span class="cm-def">inc1</span>() {
+ <span class="cm-variable">val</span><span class="cm-operator">++</span>;
+ <span class="cm-variable">console</span>.<span class="cm-property">log</span>(<span class="cm-variable">val</span>);
+}
+
+<span class="cm-keyword">function</span> <span class="cm-def">inc2</span>() {
+ <span class="cm-variable">val</span> <span class="cm-operator">+=</span> <span class="cm-variable">inc1</span>();
+ <span class="cm-variable">console</span>.<span class="cm-property">log</span>(<span class="cm-variable">val</span>);
+}
+
+<span class="cm-variable">inc2</span>();</pre>
+    </div>
+    <div class="col-md-6 javascript-output-column">
+      <textarea class="javascript-output" id="compound-assignment-operators-tjs">let val = 0;
+
+function inc1() {
+ val++;
+ console.log(val);
+}
+
+function inc2() {
+ val = val + inc1();
+ console.log(val);
+}
+
+inc2();</textarea>
+      <pre class="placeholder-code"><span class="cm-keyword">let</span> <span class="cm-def">val</span> <span class="cm-operator">=</span> <span class="cm-number">0</span>;
+
+<span class="cm-keyword">function</span> <span class="cm-def">inc1</span>() {
+ <span class="cm-variable">val</span><span class="cm-operator">++</span>;
+ <span class="cm-variable">console</span>.<span class="cm-property">log</span>(<span class="cm-variable">val</span>);
+}
+
+<span class="cm-keyword">function</span> <span class="cm-def">inc2</span>() {
+ <span class="cm-variable">val</span> <span class="cm-operator">=</span> <span class="cm-variable">val</span> <span class="cm-operator">+</span> <span class="cm-variable">inc1</span>();
+ <span class="cm-variable">console</span>.<span class="cm-property">log</span>(<span class="cm-variable">val</span>);
+}
+
+<span class="cm-variable">inc2</span>();</pre>
+    </div>
+  </div>
+  
+</aside>
+<h3>implicit type conversion</h3>
+<aside class="code-example container-fluid bg-ribbed-dark" data-example="type-conversion">
+  <div class="row">
+    <div class="col-md-6 javascript-input-column">
+      <textarea class="javascript-input" id="type-conversion-sjs">var x = 10;
+var y = new Number(7);
+
+var sum = x + y;</textarea>
+      <pre class="placeholder-code"><span class="cm-keyword">var</span> <span class="cm-def">x</span> <span class="cm-operator">=</span> <span class="cm-number">10</span>;
+<span class="cm-keyword">var</span> <span class="cm-def">y</span> <span class="cm-operator">=</span> <span class="cm-keyword">new</span> <span class="cm-variable">Number</span>(<span class="cm-number">7</span>);
+
+<span class="cm-keyword">var</span> <span class="cm-def">sum</span> <span class="cm-operator">=</span> <span class="cm-variable">x</span> <span class="cm-operator">+</span> <span class="cm-variable">y</span>;</pre>
+    </div>
+    <div class="col-md-6 javascript-output-column">
+      <textarea class="javascript-output" id="type-conversion-tjs">var x = 10;
+var y = new Number(7);
+
+var sum = x + y.valueOf();</textarea>
+      <pre class="placeholder-code"><span class="cm-keyword">var</span> <span class="cm-def">x</span> <span class="cm-operator">=</span> <span class="cm-number">10</span>;
+<span class="cm-keyword">var</span> <span class="cm-def">y</span> <span class="cm-operator">=</span> <span class="cm-keyword">new</span> <span class="cm-variable">Number</span>(<span class="cm-number">7</span>);
+
+<span class="cm-keyword">var</span> <span class="cm-def">sum</span> <span class="cm-operator">=</span> <span class="cm-variable">x</span> <span class="cm-operator">+</span> <span class="cm-variable">y</span>.<span class="cm-property">valueOf</span>();</pre>
+    </div>
+  </div>
+  
+</aside>
+<h3>prototype in object</h3>
+<aside class="code-example container-fluid bg-ribbed-dark" data-example="object-proto">
+  <div class="row">
+    <div class="col-md-6 javascript-input-column">
+      <textarea class="javascript-input" id="object-proto-sjs">var object = {
+  prop1: "value1",
+  prop2: "value2"
+}</textarea>
+      <pre class="placeholder-code"><span class="cm-keyword">var</span> <span class="cm-def">object</span> <span class="cm-operator">=</span> {
+  <span class="cm-property">prop1</span>: <span class="cm-string">"value1"</span>,
+  <span class="cm-property">prop2</span>: <span class="cm-string">"value2"</span>
+}</pre>
+    </div>
+    <div class="col-md-6 javascript-output-column">
+      <textarea class="javascript-output" id="object-proto-tjs">var object = {
+  prop1: "value1",
+  prop2: "value2",
+  __proto__: Object.prototype
+}</textarea>
+      <pre class="placeholder-code"><span class="cm-keyword">var</span> <span class="cm-def">object</span> <span class="cm-operator">=</span> {
+  <span class="cm-property">prop1</span>: <span class="cm-string">"value1"</span>,
+  <span class="cm-property">prop2</span>: <span class="cm-string">"value2"</span>,
+  <span class="cm-property">__proto__</span>: <span class="cm-variable">Object</span>.<span class="cm-property">prototype</span>
+}</pre>
+    </div>
+  </div>
+  
+</aside>
+<h3>function: prototype and constructor</h3>
+<aside class="code-example container-fluid bg-ribbed-dark" data-example="function-proto">
+  <div class="row">
+    <div class="col-md-6 javascript-input-column">
+      <textarea class="javascript-input" id="function-proto-sjs">function Human(father, mother) {
+  var gene = father("ATCG") + mother("ATCG");
+  return embryo(gene);
+}
+
+
+var man = new Human(father, mother);</textarea>
+      <pre class="placeholder-code"><span class="cm-keyword">function</span> <span class="cm-def">Human</span>(<span class="cm-def">father</span>, <span class="cm-def">mother</span>) {
+  <span class="cm-keyword">var</span> <span class="cm-def">gene</span> <span class="cm-operator">=</span> <span class="cm-variable-2">father</span>(<span class="cm-string">"ATCG"</span>) <span class="cm-operator">+</span> <span class="cm-variable-2">mother</span>(<span class="cm-string">"ATCG"</span>);
+  <span class="cm-keyword">return</span> <span class="cm-variable">embryo</span>(<span class="cm-variable-2">gene</span>);
+}
+
+
+<span class="cm-keyword">var</span> <span class="cm-def">man</span> <span class="cm-operator">=</span> <span class="cm-keyword">new</span> <span class="cm-variable">Human</span>(<span class="cm-variable">father</span>, <span class="cm-variable">mother</span>);</pre>
+    </div>
+    <div class="col-md-6 javascript-output-column">
+      <textarea class="javascript-output" id="function-proto-tjs">var Human = {
+  code: function(this, father, mother) {
+    var gene = father("ATCG") + mother("ATCG");
+    return embryo(gene);
+  },
+
+  prototype: {
+    __proto__: Object.prototype
+  }
+};
+
+var _constr = Human;
+
+var _obj = {
+  __proto__: _constr["prototype"]
+};
+
+var man = _constr["code"](_obj, father, mother);</textarea>
+      <pre class="placeholder-code"><span class="cm-keyword">var</span> <span class="cm-def">Human</span> <span class="cm-operator">=</span> {
+  <span class="cm-property">code</span>: <span class="cm-keyword">function</span>(<span class="cm-keyword">this</span>, <span class="cm-variable">father</span>, <span class="cm-variable">mother</span>) {
+    <span class="cm-keyword">var</span> <span class="cm-def">gene</span> <span class="cm-operator">=</span> <span class="cm-variable">father</span>(<span class="cm-string">"ATCG"</span>) <span class="cm-operator">+</span> <span class="cm-variable">mother</span>(<span class="cm-string">"ATCG"</span>);
+    <span class="cm-keyword">return</span> <span class="cm-variable">embryo</span>(<span class="cm-variable-2">gene</span>);
+  },
+
+  <span class="cm-property">prototype</span>: {
+    <span class="cm-property">__proto__</span>: <span class="cm-variable">Object</span>.<span class="cm-property">prototype</span>
+  }
+};
+
+<span class="cm-keyword">var</span> <span class="cm-def">_constr</span> <span class="cm-operator">=</span> <span class="cm-variable">Human</span>;
+
+<span class="cm-keyword">var</span> <span class="cm-def">_obj</span> <span class="cm-operator">=</span> {
+  <span class="cm-property">__proto__</span>: <span class="cm-variable">_constr</span>[<span class="cm-string">"prototype"</span>]
+};
+
+<span class="cm-keyword">var</span> <span class="cm-def">man</span> <span class="cm-operator">=</span> <span class="cm-variable">_constr</span>[<span class="cm-string">"code"</span>](<span class="cm-variable">_obj</span>, <span class="cm-variable">father</span>, <span class="cm-variable">mother</span>);</pre>
+    </div>
+  </div>
+  
+</aside>
+<h3>destruct class statement</h3>
+<h3>instanceof</h3>
+<h3>return is a break</h3>
+
+      </section>
+
+      </section>
+    </main>
+  </div>
+</div>
+
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js" integrity="sha384-xBuQ/xzmlsLoJpyjoggmTEz8OWUFM0/RC5BsqQBDX2v5cMvDHcMakNTNrHIW2I5f" crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/js/bootstrap.min.js" integrity="sha384-uefMccjFJAIv6A+rW+L4AHf99KvxDjWSu1z9VI8SKNVmz4sk7buKt/6v9KI65qnm" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/combine/npm/codemirror@5.37.0/lib/codemirror.js,npm/codemirror@5.37.0/mode/javascript/javascript.js"></script>
+
+<script src="./app.browser.js"></script>
+<script>
+(function() {
+  if (!window.location.origin) { // Polyfill `location.origin` for IE < 11
+    window.location.origin = `${window.location.protocol}//${window.location.hostname}`;
+  }
+
+  // Initialize Google Analytics
+  window.GA_TRACKING_ID = 'UA-106156831-1';
+
+  if (window.dataLayer == null) {
+    window.dataLayer = [];
+  }
+
+  window.gtag = function() {
+    window.dataLayer.push(arguments);
+  };
+
+  window.gtag('js', new Date());
+
+  window.gtag('config', window.GA_TRACKING_ID);
+
+  // Initialize the CoffeeScript docs interactions
+  $(document).ready(function() {
+    var clearHash, closeTry, editors, initializeEditor, initializeScrollspyFromHash, initializeTryEditors, lastCompilationElapsedTime, previousHash, replaceState, textareas, toggleSidebar, toggleTry;
+    // Format dates for the user’s locale, e.g. 'December 24, 2009' or '24 décembre 2009'
+    $('time').each(function(index, el) {
+      var date, formattedDate;
+      date = el.dateTime || $(el).text();
+      formattedDate = new Date(date).toLocaleDateString(void 0, { // undefined to use browser locale
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+      return $(el).text(formattedDate.toString());
+    });
+    // Mobile navigation
+    toggleSidebar = function() {
+      return $('.navbar-toggler, .sidebar').toggleClass('show');
+    };
+    $('[data-toggle="offcanvas"]').click(toggleSidebar);
+    $('[data-action="sidebar-nav"]').click(function(event) {
+      if ($('.navbar-toggler').is(':visible')) {
+        event.preventDefault();
+        toggleSidebar();
+        setTimeout(function() {
+          return window.location = event.target.href;
+        }, 260); // Wait for the sidebar to slide away before navigating
+      }
+      return gtag('event', 'sidebar_navigate', {
+        event_category: 'navigation',
+        event_label: event.target.href.replace(window.location.origin, '')
+      });
+    });
+    // Initialize Scrollspy for sidebar navigation; https://getbootstrap.com/docs/4.0/components/scrollspy/
+    // See also http://www.codingeverything.com/2014/02/BootstrapDocsSideBar.html and http://jsfiddle.net/KyleMit/v6zhz/
+    $('.main').scrollspy({
+      target: '#contents',
+      offset: Math.round($('main').css('padding-top').replace('px', ''))
+    });
+    initializeScrollspyFromHash = function(hash) {
+      return $(`#contents a.active[href!='${hash}']`).removeClass('show');
+    };
+    $('.main').on('activate.bs.scrollspy', function(event, target) {
+      var $target;
+      // We only want one active link in the nav
+      $(`#contents a.active[href!='${target.relatedTarget}']`).removeClass('show');
+      $target = $(`#contents a[href='${target.relatedTarget}']`);
+      if ($target.prop('href') === `${window.location.origin}/#try`) {
+        return;
+      }
+      // Update the browser address bar on scroll, without adding to the history; clicking the sidebar links will automatically add to the history
+      replaceState($target.prop('href'));
+      // Track this as a new pageview; we only want '/#hash', not 'https://coffeescript.org/#hash'
+      return gtag('config', GA_TRACKING_ID, {
+        page_path: $target.prop('href').replace(window.location.origin, '')
+      });
+    });
+    // Initialize CodeMirror for code examples; https://codemirror.net/doc/manual.html
+    // Defer this until a code example is clicked or focused, to avoid unnecessary computation/slowness
+    textareas = [];
+    editors = [];
+    lastCompilationElapsedTime = 200;
+    $('textarea').each(function(index) {
+      textareas[index] = this;
+      return $(this).data('index', index);
+    });
+    initializeEditor = function($textarea) {
+      var editor, index, mode, pending;
+      index = $textarea.data('index');
+      mode = 'javascript';
+      editors[index] = editor = CodeMirror.fromTextArea($textarea[0], {
+        mode: mode,
+        theme: 'twilight',
+        indentUnit: 2,
+        tabSize: 2,
+        lineWrapping: true,
+        lineNumbers: false,
+        inputStyle: 'contenteditable',
+        readOnly: false, // Can’t use 'nocursor' if we want the JavaScript to be copyable
+        viewportMargin: 2e308
+      });
+      // Whenever the user edits the CoffeeScript side of a code example, update the JavaScript output
+      // If the editor is Try CoffeeScript, also update the hash and save this code in localStorage
+      if (mode === 'javascript') {
+        pending = null;
+        editor.on('change', function(instance, change) {
+          clearTimeout(pending);
+          return pending = setTimeout(function() {
+            var coffee, exception, lastCompilationStartTime, link, output;
+            lastCompilationStartTime = Date.now();
+            try {
+              coffee = editor.getValue();
+              if (index === 0 && $('#try').hasClass('show')) { // If this is the editor in Try CoffeeScript and it’s still visible
+                if ($('#try').hasClass('show')) {
+                  // Update the hash with the current code
+                  link = `try:${encodeURIComponent(coffee)}`;
+                  replaceState(`${(window.location.href.split('#')[0])}#${link}`);
+                }
+                try {
+                  // Save this to the user’s localStorage
+                  if (window.localStorage != null) {
+                    window.localStorage.setItem('tryCoffeeScriptCode', coffee);
+                  }
+                } catch (error) {
+                  exception = error;
+                }
+              }
+              output = desugar.transform(coffee);
+              lastCompilationElapsedTime = Math.max(200, Date.now() - lastCompilationStartTime);
+            } catch (error) {
+              exception = error;
+              output = `${exception}`;
+            }
+            editors[index + 1].setValue(output);
+            return gtag('event', 'edit_code', {
+              event_category: 'engagement',
+              event_label: $textarea.closest('[data-example]').data('example')
+            });
+          }, lastCompilationElapsedTime);
+        });
+        // Fix the code editors’ handling of tab-indented code
+        return editor.addKeyMap({
+          'Tab': function(cm) {
+            if (cm.somethingSelected()) {
+              return cm.indentSelection('add');
+            } else if (/^\t/m.test(cm.getValue())) {
+              // If any lines start with a tab, treat this as tab-indented code
+              return cm.execCommand('insertTab');
+            } else {
+              return cm.execCommand('insertSoftTab');
+            }
+          },
+          'Shift-Tab': function(cm) {
+            return cm.indentSelection('subtract');
+          },
+          'Enter': function(cm) {
+            cm.options.indentWithTabs = /^\t/m.test(cm.getValue());
+            return cm.execCommand('newlineAndIndent');
+          }
+        });
+      }
+    };
+    $('.placeholder-code').one('mouseover', function(event) {
+      var $siblingColumn, $textarea;
+      $textarea = $(this).prev('textarea');
+      $(this).remove();
+      initializeEditor($textarea);
+      // Initialize the sibling column too
+      $siblingColumn = $($textarea.parent().siblings()[0]);
+      $siblingColumn.children('.placeholder-code').remove();
+      return initializeEditor($($siblingColumn.children('textarea')[0]));
+    });
+    initializeTryEditors = function() {};
+    // initializeEditor $ '#try-coffeescript-js'
+    // initializeEditor $ '#try-coffeescript-js'
+
+    // Handle the code example buttons
+    $('[data-action="run-code-example"]').click(function() {
+      var index, js, run;
+      run = $(this).data('run');
+      index = $(`#${$(this).data('example')}-js`).data('index');
+      js = editors[index] != null ? editors[index].getValue() : $(textareas[index]).val();
+      if (run !== true) {
+        js = `${js}\nalert(${unescape(run)});`;
+      }
+      window.eval(js);
+      return gtag('event', 'run_code', {
+        event_category: 'engagement',
+        event_label: $(this).closest('[data-example]').data('example')
+      });
+    });
+    // Try CoffeeScript
+    previousHash = null;
+    toggleTry = function(checkLocalStorage) {
+      var coffee, exception;
+      $('#try, #try-link').toggleClass('show');
+      if ($('#try').hasClass('show')) {
+        if (window.location.hash) {
+          previousHash = window.location.hash;
+        }
+        if ($('#try .CodeMirror').length === 0) {
+          initializeTryEditors();
+        }
+        if (checkLocalStorage && (window.localStorage != null)) {
+          try {
+            coffee = window.localStorage.getItem('tryCoffeeScriptCode');
+            if (coffee != null) {
+              return editors[0].setValue(coffee);
+            } else {
+              return replaceState('#try');
+            }
+          } catch (error) {
+            exception = error;
+            return replaceState('#try');
+          }
+        } else {
+          return replaceState('#try');
+        }
+      } else {
+        if (previousHash) {
+          return replaceState(previousHash);
+        } else {
+          return clearHash();
+        }
+      }
+    };
+    closeTry = function() {
+      $('#try, #try-link').removeClass('show');
+      if (previousHash) {
+        return replaceState(previousHash);
+      } else {
+        return clearHash();
+      }
+    };
+    $('[data-toggle="try"]').click(function(event) {
+      event.preventDefault();
+      return toggleTry(true);
+    });
+    $('[data-close="try"]').click(closeTry);
+    $('[data-action="scroll-to-top"]').click(function(event) {
+      if ($('#try').hasClass('show')) {
+        return;
+      }
+      $('.main')[0].scrollTop = 0;
+      return setTimeout(clearHash, 10);
+    });
+    clearHash = function() {
+      return window.history.replaceState({}, document.title, window.location.pathname);
+    };
+    replaceState = function(newURL) {
+      if ((newURL != null ? newURL.indexOf('#') : void 0) === 0) {
+        newURL = `${window.location.pathname}${newURL}`;
+      }
+      return window.history.replaceState({}, document.title, newURL || '');
+    };
+    $(window).on('hashchange', function() {
+      if (window.location.hash === '') {
+        // Get rid of dangling # in the address bar
+        return clearHash();
+      }
+    });
+    // Configure the initial state
+    if (window.location.hash != null) {
+      if (window.location.hash === '#try') {
+        return toggleTry(true);
+      } else if (window.location.hash.indexOf('#try') === 0) {
+        if ($('#try .CodeMirror').length === 0) {
+          initializeTryEditors();
+        }
+        editors[0].setValue(decodeURIComponent(window.location.hash.slice(5)));
+        return toggleTry(false);
+      } else if (window.location.hash === '') {
+        return clearHash();
+      } else {
+        initializeScrollspyFromHash(window.location.hash);
+        if (window.location.hash.length > 1) {
+          // Initializing the code editors might’ve thrown off our vertical scroll position
+          return document.getElementById(window.location.hash.slice(1).replace(/try:.*/, '')).scrollIntoView();
+        }
+      }
+    }
+  });
+
+}).call(this);
+
+</script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-106156831-1"></script>
+
+</body>
+</html>
