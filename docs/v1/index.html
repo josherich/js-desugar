@@ -551,6 +551,10 @@ textarea {
       <nav id="contents" class="navbar contents">
   <nav class="nav flex-column">
     <a href="#introduction" class="nav-link" data-action="sidebar-nav">Introduction</a>
+    <a href="#compound-op" class="nav-link" data-action="sidebar-nav">compound operators</a>
+    <a href="#type-conversion" class="nav-link" data-action="sidebar-nav">Type Conversion</a>
+    <a href="#obj-prototype" class="nav-link" data-action="sidebar-nav">Object prototype</a>
+    <a href="#function-prototype" class="nav-link" data-action="sidebar-nav">Function prototype</a>
   </nav>
 </nav>
 
@@ -560,13 +564,17 @@ textarea {
 
       </header>
       <section id="introduction">
-        <h2>hello desugar</h2>
-<h3>compound assignment operators</h3>
+        <h2>Introduction</h2>
+<h3>formal semantics</h3>
+
+      </section>
+      <section id="compound-op">
+        <h2>compound assignment operators</h2>
 <p>The compound assignment operator hide one step of righthand side evaluation. This is where the code deviates with what’s in our mind.</p>
 <aside class="code-example container-fluid bg-ribbed-dark" data-example="compound-assignment-operators">
   <div class="row">
     <div class="col-md-6 javascript-input-column">
-      <textarea class="javascript-input" id="compound-assignment-operators-sjs">let val = 0;
+      <textarea class="javascript-input" id="compound-assignment-operators-sjs" data-options="_compound_op_unfold">let val = 0;
 
 function inc1() {
  val++;
@@ -624,11 +632,14 @@ inc2();</textarea>
   </div>
   
 </aside>
-<h3>implicit type conversion</h3>
+
+      </section>
+      <section id="type-conversion">
+        <h3>implicit type conversion</h3>
 <aside class="code-example container-fluid bg-ribbed-dark" data-example="type-conversion">
   <div class="row">
     <div class="col-md-6 javascript-input-column">
-      <textarea class="javascript-input" id="type-conversion-sjs">var x = 10;
+      <textarea class="javascript-input" id="type-conversion-sjs" data-options="_type_conversion">var x = 10;
 var y = new Number(7);
 
 var sum = x + y;</textarea>
@@ -650,11 +661,14 @@ var sum = x + y.valueOf();</textarea>
   </div>
   
 </aside>
-<h3>prototype in object</h3>
+
+      </section>
+      <section id="obj-prototype">
+        <h2>prototype in object</h2>
 <aside class="code-example container-fluid bg-ribbed-dark" data-example="object-proto">
   <div class="row">
     <div class="col-md-6 javascript-input-column">
-      <textarea class="javascript-input" id="object-proto-sjs">var object = {
+      <textarea class="javascript-input" id="object-proto-sjs" data-options="_object_proto">var object = {
   prop1: "value1",
   prop2: "value2"
 }</textarea>
@@ -678,11 +692,14 @@ var sum = x + y.valueOf();</textarea>
   </div>
   
 </aside>
-<h3>function: prototype and constructor</h3>
+
+      </section>
+      <section id="function-prototype">
+        <h2>function: prototype and constructor</h2>
 <aside class="code-example container-fluid bg-ribbed-dark" data-example="function-proto">
   <div class="row">
     <div class="col-md-6 javascript-input-column">
-      <textarea class="javascript-input" id="function-proto-sjs">function Human(father, mother) {
+      <textarea class="javascript-input" id="function-proto-sjs" data-options="_function_proto">function Human(father, mother) {
   var gene = father("ATCG") + mother("ATCG");
   return embryo(gene);
 }
@@ -741,8 +758,6 @@ var man = _constr["code"](_obj, father, mother);</textarea>
 <h3>destruct class statement</h3>
 <h3>instanceof</h3>
 <h3>return is a break</h3>
-
-      </section>
 
       </section>
     </main>
@@ -858,7 +873,7 @@ var man = _constr["code"](_obj, father, mother);</textarea>
       });
       // Whenever the user edits the CoffeeScript side of a code example, update the JavaScript output
       // If the editor is Try CoffeeScript, also update the hash and save this code in localStorage
-      if (mode === 'javascript') {
+      if (mode === 'javascript' && $textarea.hasClass('javascript-input')) {
         pending = null;
         editor.on('change', function(instance, change) {
           clearTimeout(pending);
@@ -882,7 +897,7 @@ var man = _constr["code"](_obj, father, mother);</textarea>
                   exception = error;
                 }
               }
-              output = desugar.transform(coffee);
+              output = desugar.transform(coffee, $textarea.attr('data-options').split(';'));
               lastCompilationElapsedTime = Math.max(200, Date.now() - lastCompilationStartTime);
             } catch (error) {
               exception = error;

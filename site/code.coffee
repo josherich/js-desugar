@@ -45,4 +45,4 @@ module.exports = ->
 
       html
 
-    output = render {file, cs, js, highlight, include, run}
+    output = render {file, cs, js, highlight, include, run, options}

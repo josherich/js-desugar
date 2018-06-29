@@ -87,7 +87,7 @@ $(document).ready ->
 
     # Whenever the user edits the CoffeeScript side of a code example, update the JavaScript output
     # If the editor is Try CoffeeScript, also update the hash and save this code in localStorage
-    if mode is 'javascript'
+    if mode is 'javascript' and $textarea.hasClass 'javascript-input'
       pending = null
       editor.on 'change', (instance, change) ->
         clearTimeout pending
@@ -105,7 +105,7 @@ $(document).ready ->
                 if window.localStorage?
                   window.localStorage.setItem 'tryCoffeeScriptCode', coffee
               catch exception
-            output = desugar.transform coffee
+            output = desugar.transform coffee, $textarea.attr('data-options').split(';')
             lastCompilationElapsedTime = Math.max(200, Date.now() - lastCompilationStartTime)
           catch exception
             output = "#{exception}"
